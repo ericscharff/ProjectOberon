@@ -1,4 +1,4 @@
-MODULE ORG; (* NW  31.5.2015  code generator in Oberon-07 for RISC*)
+MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 22.7.2018  Oberon compiler; code generator for RISC*)
   IMPORT SYSTEM, Files, ORS, ORB;
   (*Code generator for Oberon compiler for RISC processor.
      Procedural interface to Parser OSAP; result in array "code".
@@ -6,8 +6,8 @@ MODULE ORG; (* NW  31.5.2015  code generator in Oberon-07 for RISC*)
 
   CONST WordSize* = 4;
     StkOrg0 = -64; VarOrg0 = 0;  (*for RISC-0 only*)
-    MT = 12; SB = 13; SP = 14; LNK = 15;   (*dedicated registers*)
-    maxCode = 8000; maxStrx = 2400; maxTD = 120; C24 = 1000000H;
+    MT = 12; SP = 14; LNK = 15;   (*dedicated registers*)
+    maxCode = 8000; maxStrx = 2400; maxTD = 160; C24 = 1000000H;
     Reg = 10; RegI = 11; Cond = 12;  (*internal item modes*)
 
   (*frequently used opcodes*)  U = 2000H; V = 1000H;
@@ -39,7 +39,6 @@ MODULE ORG; (* NW  31.5.2015  code generator in Oberon-07 for RISC*)
     tdx, strx: LONGINT;
     entry: LONGINT;   (*main entry point*)
     RH: LONGINT;  (*available registers R[0] ... R[H-1]*)
-    curSB: LONGINT;  (*current static base in SB*)
     frame: LONGINT;  (*frame offset changed in SaveRegs and RestoreRegs*)
     fixorgP, fixorgD, fixorgT: LONGINT;   (*origins of lists of locations to be fixed up by loader*)
     check: BOOLEAN;  (*emit run-time checks*)
@@ -64,7 +63,7 @@ MODULE ORG; (* NW  31.5.2015  code generator in Oberon-07 for RISC*)
   END Put1;
 
   PROCEDURE Put1a(op, a, b, im: LONGINT);
-  BEGIN (*same as Pu1, but with range test  -10000H <= im < 10000H*)
+  BEGIN (*same as Put1, but with range test  -10000H <= im < 10000H*)
     IF (im >= -10000H) & (im <= 0FFFFH) THEN Put1(op, a, b, im)
     ELSE Put1(Mov+U, RH, 0, im DIV 10000H);
       IF im MOD 10000H # 0 THEN Put1(Ior, RH, RH, im MOD 10000H) END ;
@@ -90,7 +89,7 @@ MODULE ORG; (* NW  31.5.2015  code generator in Oberon-07 for RISC*)
   PROCEDURE CheckRegs*;
   BEGIN
     IF RH # 0 THEN ORS.Mark("Reg Stack"); RH := 0 END ;
-    IF pc >= maxCode - 40 THEN ORS.Mark("Program too long") END
+    IF pc >= maxCode - 40 THEN ORS.Mark("program too long") END ;
   END CheckRegs;
 
   PROCEDURE SetCC(VAR x: Item; n: LONGINT);
@@ -98,7 +97,7 @@ MODULE ORG; (* NW  31.5.2015  code generator in Oberon-07 for RISC*)
   END SetCC;
 
   PROCEDURE Trap(cond, num: LONGINT);
-  BEGIN num := ORS.Pos()*100H + num*10H + MT; Put3(BLR, cond, num)
+  BEGIN Put3(BLR, cond, ORS.Pos()*100H + num*10H + MT)
   END Trap;
 
   (*handling of forward reference, fixups of branch addresses and constant tables*)
@@ -109,17 +108,17 @@ MODULE ORG; (* NW  31.5.2015  code generator in Oberon-07 for RISC*)
     RETURN cond
   END negated;
 
-  PROCEDURE invalSB;
-  BEGIN curSB := 1
-  END invalSB;
-
   PROCEDURE fix(at, with: LONGINT);
   BEGIN code[at] := code[at] DIV C24 * C24 + (with MOD C24)
   END fix;
 
+  PROCEDURE FixOne*(at: LONGINT);
+  BEGIN fix(at, pc-at-1)
+  END FixOne;
+
   PROCEDURE FixLink*(L: LONGINT);
     VAR L1: LONGINT;
-  BEGIN invalSB;
+  BEGIN
     WHILE L # 0 DO L1 := code[L] MOD 40000H; fix(L, pc-L-1); L := L1 END
   END FixLink;
 
@@ -146,8 +145,8 @@ MODULE ORG; (* NW  31.5.2015  code generator in Oberon-07 for RISC*)
 
   PROCEDURE GetSB(base: LONGINT);
   BEGIN
-    IF (version # 0) & ((base # curSB) OR (base # 0)) THEN
-      Put2(Ldr, SB, -base, pc-fixorgD); fixorgD := pc-1; curSB := base
+    IF version = 0 THEN Put1(Mov, RH, 0, VarOrg0)
+    ELSE Put2(Ldr, RH, -base, pc-fixorgD); fixorgD := pc-1
     END
   END GetSB;
 
@@ -164,7 +163,7 @@ MODULE ORG; (* NW  31.5.2015  code generator in Oberon-07 for RISC*)
         IF x.type.form = ORB.Proc THEN
           IF x.r > 0 THEN ORS.Mark("not allowed")
           ELSIF x.r = 0 THEN Put3(BL, 7, 0); Put1a(Sub, RH, LNK, pc*4 - x.a)
-          ELSE GetSB(x.r); Put1(Add, RH, SB, x.a + 100H) (*mark as progbase-relative*)
+          ELSE GetSB(x.r); Put1(Add, RH, RH, x.a + 100H) (*mark as progbase-relative*)
           END
         ELSIF (x.a <= 0FFFFH) & (x.a >= -10000H) THEN Put1(Mov, RH, 0, x.a)
         ELSE Put1(Mov+U, RH, 0, x.a DIV 10000H MOD 10000H);
@@ -173,7 +172,7 @@ MODULE ORG; (* NW  31.5.2015  code generator in Oberon-07 for RISC*)
         x.r := RH; incR
       ELSIF x.mode = ORB.Var THEN
         IF x.r > 0 THEN (*local*) Put2(op, RH, SP, x.a + frame)
-        ELSE GetSB(x.r); Put2(op, RH, SB, x.a)
+        ELSE GetSB(x.r); Put2(op, RH, RH, x.a)
         END ;
         x.r := RH; incR
       ELSIF x.mode = ORB.Par THEN Put2(Ldr, RH, SP, x.a + frame); Put2(op, RH, RH, x.b); x.r := RH; incR
@@ -191,7 +190,7 @@ MODULE ORG; (* NW  31.5.2015  code generator in Oberon-07 for RISC*)
   BEGIN
     IF x.mode = ORB.Var THEN
       IF x.r > 0 THEN (*local*) Put1a(Add, RH, SP, x.a + frame)
-      ELSE GetSB(x.r); Put1a(Add, RH, SB, x.a)
+      ELSE GetSB(x.r); Put1a(Add, RH, RH, x.a)
       END ;
       x.r := RH; incR
     ELSIF x.mode = ORB.Par THEN Put2(Ldr, RH, SP, x.a + frame);
@@ -223,7 +222,7 @@ MODULE ORG; (* NW  31.5.2015  code generator in Oberon-07 for RISC*)
   END loadTypTagAdr;
 
   PROCEDURE loadStringAdr(VAR x: Item);
-  BEGIN GetSB(0); Put1a(Add, RH, SB, varsize+x.a); x.mode := Reg; x.r := RH; incR
+  BEGIN GetSB(0); Put1a(Add, RH, RH, varsize+x.a); x.mode := Reg; x.r := RH; incR
   END loadStringAdr;
 
   (* Items: Conversion from constants or from Objects on the Heap to Items on the Stack*)
@@ -291,8 +290,8 @@ MODULE ORG; (* NW  31.5.2015  code generator in Oberon-07 for RISC*)
       IF x.mode = ORB.Var THEN
         IF x.r > 0 THEN Put0(Add, y.r, SP, y.r); INC(x.a, frame)
         ELSE GetSB(x.r);
-          IF x.r = 0 THEN Put0(Add, y.r, SB, y.r)
-          ELSE Put1a(Add, RH, SB, x.a); Put0(Add, y.r, RH, y.r); x.a := 0
+          IF x.r = 0 THEN Put0(Add, y.r, RH, y.r)
+          ELSE Put1a(Add, RH, RH, x.a); Put0(Add, y.r, RH, y.r); x.a := 0
           END
         END ;
         x.r := y.r; x.mode := RegI
@@ -307,7 +306,7 @@ MODULE ORG; (* NW  31.5.2015  code generator in Oberon-07 for RISC*)
   PROCEDURE DeRef*(VAR x: Item);
   BEGIN
     IF x.mode = ORB.Var THEN
-      IF x.r > 0 THEN (*local*) Put2(Ldr, RH, SP, x.a + frame) ELSE GetSB(x.r); Put2(Ldr, RH, SB, x.a) END ;
+      IF x.r > 0 THEN (*local*) Put2(Ldr, RH, SP, x.a + frame) ELSE GetSB(x.r); Put2(Ldr, RH, RH, x.a) END ;
       NilCheck; x.r := RH; incR
     ELSIF x.mode = ORB.Par THEN
       Put2(Ldr, RH, SP, x.a + frame); Put2(Ldr, RH, RH, x.b); NilCheck; x.r := RH; incR
@@ -344,7 +343,7 @@ MODULE ORG; (* NW  31.5.2015  code generator in Oberon-07 for RISC*)
     IF s <= 24 THEN s := 32 ELSIF s <= 56 THEN s := 64 ELSIF s <= 120 THEN s := 128
     ELSE s := (s+263) DIV 256 * 256
     END ;
-    T.len := dc; data[dcw] := s; INC(dcw);
+    T.len := dc; data[dcw] := s; INC(dcw);  (*len used as address*)
     k := T.nofpar;   (*extension level!*)
     IF k > 3 THEN ORS.Mark("ext level too large")
     ELSE Q(T, dcw);
@@ -503,7 +502,7 @@ MODULE ORG; (* NW  31.5.2015  code generator in Oberon-07 for RISC*)
 
   PROCEDURE Singleton*(VAR x: Item);  (* x := {x} *)
   BEGIN
-    IF x.mode = ORB.Const THEN x.a := LSL(1, x.a)
+    IF x.mode = ORB.Const THEN x.a := LSL(1, x.a) 
     ELSE load(x); Put1(Mov, RH, 0, 1); Put0(Lsl, x.r, RH,  x.r)
     END
   END Singleton;
@@ -513,7 +512,7 @@ MODULE ORG; (* NW  31.5.2015  code generator in Oberon-07 for RISC*)
     IF (x.mode = ORB.Const) & ( y.mode = ORB.Const) THEN
       IF x.a <= y.a THEN x.a := LSL(2, y.a) - LSL(1, x.a) ELSE x.a := 0 END
     ELSE
-      IF (x.mode = ORB.Const) & (x.a < 16) THEN x.a := LSL(-1, x.a)
+      IF (x.mode = ORB.Const) & (x.a <= 16) THEN x.a := LSL(-1, x.a)
       ELSE load(x); Put1(Mov, RH, 0, -1); Put0(Lsl, x.r, RH, x.r)
       END ;
       IF (y.mode = ORB.Const) & (y.a < 16) THEN Put1(Mov, RH, 0, LSL(-2, y.a)); y.mode := Reg; y.r := RH; incR
@@ -571,21 +570,12 @@ MODULE ORG; (* NW  31.5.2015  code generator in Oberon-07 for RISC*)
       load(x);
       IF (y.a # 0) OR ~(op IN {ORS.eql, ORS.neq}) OR (code[pc-1] DIV 40000000H # -2) THEN Put1a(Cmp, x.r, x.r, y.a) END ;
       DEC(RH)
-    ELSE load(x); load(y); Put0(Cmp, x.r, x.r, y.r); DEC(RH, 2)
+    ELSE
+      IF (x.mode = Cond) OR (y.mode = Cond) THEN ORS.Mark("not implemented") END ;
+      load(x); load(y); Put0(Cmp, x.r, x.r, y.r); DEC(RH, 2)
     END ;
     SetCC(x, relmap[op - ORS.eql])
   END IntRelation;
-
-  PROCEDURE SetRelation*(op: INTEGER; VAR x, y: Item);   (* x := x < y *)
-  BEGIN load(x);
-    IF (op = ORS.eql) OR (op = ORS.neq) THEN
-      IF y.mode = ORB.Const THEN Put1a(Cmp, x.r, x.r, y.a); DEC(RH)
-      ELSE load(y); Put0(Cmp, x.r, x.r, y.r); DEC(RH, 2)
-      END ;
-      SetCC(x, relmap[op - ORS.eql])
-    ELSE ORS.Mark("illegal relation") 
-    END
-  END SetRelation;
 
   PROCEDURE RealRelation*(op: INTEGER; VAR x, y: Item);   (* x := x < y *)
   BEGIN load(x);
@@ -619,7 +609,7 @@ MODULE ORG; (* NW  31.5.2015  code generator in Oberon-07 for RISC*)
     IF x.type.size = 1 THEN op := Str+1 ELSE op := Str END ;
     IF x.mode = ORB.Var THEN
       IF x.r > 0 THEN (*local*) Put2(op, y.r, SP, x.a + frame)
-      ELSE GetSB(x.r); Put2(op, y.r, SB, x.a)
+      ELSE GetSB(x.r); Put2(op, y.r, RH, x.a)
       END
     ELSIF x.mode = ORB.Par THEN Put2(Ldr, RH, SP, x.a + frame); Put2(op, y.r, RH, x.b);
     ELSIF x.mode = RegI THEN Put2(op, y.r, x.r, x.a); DEC(RH);
@@ -630,47 +620,56 @@ MODULE ORG; (* NW  31.5.2015  code generator in Oberon-07 for RISC*)
 
   PROCEDURE StoreStruct*(VAR x, y: Item); (* x := y, frame = 0 *)
     VAR s, pc0: LONGINT;
-  BEGIN loadAdr(x); loadAdr(y);
-    IF (x.type.form = ORB.Array) & (x.type.len > 0) THEN
-      IF y.type.len >= 0 THEN 
-        IF x.type.len >= y.type.len THEN Put1a(Mov, RH, 0, (y.type.size+3) DIV 4)
-        ELSE ORS.Mark("source array too long")
+  BEGIN
+    IF y.type.size # 0 THEN
+      loadAdr(x); loadAdr(y);
+      IF (x.type.form = ORB.Array) &  (x.type.len > 0) THEN
+        IF y.type.len >= 0 THEN 
+          IF x.type.size = y.type.size THEN Put1a(Mov, RH, 0, (y.type.size+3) DIV 4)
+          ELSE ORS.Mark("different length/size, not implemented")
+          END
+        ELSE (*y  open array*) Put2(Ldr, RH, SP, y.a+4); s := y.type.base.size;  (*element size*)
+          pc0 := pc; Put3(BC, EQ, 0);
+          IF s = 1 THEN Put1(Add, RH, RH, 3); Put1(Asr, RH, RH, 2)
+          ELSIF s # 4 THEN Put1a(Mul, RH, RH, s DIV 4)
+          END ;
+          IF check THEN
+            Put1a(Mov, RH+1, 0, (x.type.size+3) DIV 4); Put0(Cmp, RH+1, RH, RH+1); Trap(GT, 3)
+          END ;
+          fix(pc0, pc + 5 - pc0)
         END
-      ELSE (*y is open array*)
-        Put2(Ldr, RH, SP, y.a+4); s := y.type.base.size;  (*element size*)
-        pc0 := pc; Put3(BC, EQ, 0);
-        IF s = 1 THEN Put1(Add, RH, RH, 3); Put1(Asr, RH, RH, 2)
-        ELSIF s # 4 THEN Put1a(Mul, RH, RH, s DIV 4)
-        END ;
-        IF check THEN
-          Put1a(Mov, RH+1, 0, (x.type.size+3) DIV 4); Put0(Cmp, RH+1, RH, RH+1); Trap(GT, 3)
-        END ;
-        fix(pc0, pc + 5 - pc0)
-      END
-    ELSIF x.type.form = ORB.Record THEN Put1a(Mov, RH, 0, x.type.size DIV 4)
-    ELSE ORS.Mark("inadmissible assignment")
+      ELSIF x.type.form = ORB.Record THEN Put1a(Mov, RH, 0, x.type.size DIV 4)
+      ELSE ORS.Mark("inadmissible assignment")
+      END ;
+      Put2(Ldr, RH+1, y.r, 0); Put1(Add, y.r, y.r, 4);
+      Put2(Str, RH+1, x.r, 0); Put1(Add, x.r, x.r, 4);
+      Put1(Sub, RH, RH, 1); Put3(BC, NE, -6)
     END ;
-    Put2(Ldr, RH+1, y.r, 0); Put1(Add, y.r, y.r, 4);
-    Put2(Str, RH+1, x.r, 0); Put1(Add, x.r, x.r, 4);
-    Put1(Sub, RH, RH, 1); Put3(BC, NE, -6); DEC(RH, 2)
+    RH := 0
   END StoreStruct;
 
-  PROCEDURE CopyString*(VAR x, y: Item);  (*from x to y*)
-    VAR len: LONGINT;
-  BEGIN loadAdr(y); len := y.type.len;
+  PROCEDURE CopyString*(VAR x, y: Item);  (* x := y *) 
+     VAR len: LONGINT;
+   BEGIN loadAdr(x); len := x.type.len;
     IF len >= 0 THEN
-      IF x.b > len THEN ORS.Mark("string too long") END
-    ELSIF check THEN Put2(Ldr, RH, y.r, 4);  (*array length check*)
-      Put1(Cmp, RH, RH, x.b); Trap(NE, 3)
+      IF len <  y.b THEN ORS.Mark("string too long") END
+    ELSIF check THEN Put2(Ldr, RH, SP, x.a+4);  (*open array len, frame = 0*)
+      Put1(Cmp,RH, RH, y.b); Trap(LT, 3)
     END ;
-    loadStringAdr(x);
-    Put2(Ldr, RH, x.r, 0); Put1(Add, x.r, x.r, 4);
-    Put2(Str, RH, y.r, 0); Put1(Add, y.r, y.r, 4);
-    Put1(Asr, RH, RH, 24); Put3(BC, NE, -6); DEC(RH, 2)
-  END CopyString;
-
+    loadStringAdr(y);
+    Put2(Ldr, RH, y.r, 0); Put1(Add, y.r, y.r, 4);
+    Put2(Str, RH, x.r, 0); Put1(Add, x.r, x.r, 4);
+    Put1(Asr, RH, RH, 24); Put3(BC, NE,  -6);  RH := 0
+   END CopyString;
+  
   (* Code generation for parameters *)
   
+  PROCEDURE OpenArrayParam*(VAR x: Item);
+  BEGIN loadAdr(x);
+    IF x.type.len >= 0 THEN Put1a(Mov, RH, 0, x.type.len) ELSE Put2(Ldr, RH, SP, x.a+4+frame) END ;
+    incR
+  END OpenArrayParam;
+
   PROCEDURE VarParam*(VAR x: Item; ftype: ORB.Type);
     VAR xmd: INTEGER;
   BEGIN xmd := x.mode; loadAdr(x);
@@ -685,12 +684,6 @@ MODULE ORG; (* NW  31.5.2015  code generator in Oberon-07 for RISC*)
   PROCEDURE ValueParam*(VAR x: Item);
   BEGIN load(x)
   END ValueParam;
-
-  PROCEDURE OpenArrayParam*(VAR x: Item);
-  BEGIN loadAdr(x);
-    IF x.type.len >= 0 THEN Put1a(Mov, RH, 0, x.type.len) ELSE Put2(Ldr, RH, SP, x.a+4+frame) END ;
-    incR
-  END OpenArrayParam;
 
   PROCEDURE StringParam*(VAR x: Item);
   BEGIN loadStringAdr(x); Put1(Mov, RH, 0, x.b); incR  (*len*)
@@ -722,7 +715,7 @@ MODULE ORG; (* NW  31.5.2015  code generator in Oberon-07 for RISC*)
   (* Branches, procedure calls, procedure prolog and epilog *)
 
   PROCEDURE Here*(): LONGINT;
-  BEGIN invalSB; RETURN pc
+  BEGIN RETURN pc
   END Here;
 
   PROCEDURE FJump*(VAR L: LONGINT);
@@ -791,20 +784,20 @@ MODULE ORG; (* NW  31.5.2015  code generator in Oberon-07 for RISC*)
     ELSE (*function*)
       IF r > 0 THEN Put0(Mov, r, 0, 0); RestoreRegs(r) END ;
       x.mode := Reg; x.r := r; RH := r+1
-    END ;
-    invalSB
+    END
   END Call;
 
   PROCEDURE Enter*(parblksize, locblksize: LONGINT; int: BOOLEAN);
     VAR a, r: LONGINT;
-  BEGIN invalSB; frame := 0;
+  BEGIN frame := 0;
     IF ~int THEN (*procedure prolog*)
+      IF locblksize >= 10000H THEN ORS.Mark("too many locals") END ;
       a := 4; r := 0;
       Put1(Sub, SP, SP, locblksize); Put2(Str, LNK, SP, 0);
       WHILE a < parblksize DO Put2(Str, r, SP, a); INC(r); INC(a, 4) END
     ELSE (*interrupt procedure*)
-      Put1(Sub, SP, SP, 12); Put2(Str, 0, SP, 0); Put2(Str, 1, SP, 4); Put2(Str, SB, SP, 8)
-      (*R0, R1, SB saved os stack*)
+      Put1(Sub, SP, SP, locblksize); Put2(Str, 0, SP, 0); Put2(Str, 1, SP, 4); Put2(Str, 2, SP, 8)
+      (*R0, R1, R2 saved on stack*)
     END
   END Enter;
 
@@ -813,8 +806,9 @@ MODULE ORG; (* NW  31.5.2015  code generator in Oberon-07 for RISC*)
     IF form # ORB.NoTyp THEN load(x) END ;
     IF ~int THEN (*procedure epilog*)
       Put2(Ldr, LNK, SP, 0); Put1(Add, SP, SP, size); Put3(BR, 7, LNK)
-    ELSE (*interrupt return, restore SB, R1, R0*)
-      Put2(Ldr, SB, SP, 8); Put2(Ldr, 1, SP, 4); Put2(Ldr, 0, SP, 0); Put1(Add, SP, SP, 12); Put3(BR, 7, 10H)
+    ELSE (*interrupt return, restore R2, R1, R0*)
+      Put2(Ldr, 2, SP, 8); Put2(Ldr, 1, SP, 4); Put2(Ldr, 0, SP, 0); Put1(Add, SP, SP, size);
+      Put3(BR, 7, 10H) (*RTI*)
     END ;
     RH := 0
   END Return;
@@ -858,7 +852,7 @@ MODULE ORG; (* NW  31.5.2015  code generator in Oberon-07 for RISC*)
   END Assert; 
 
   PROCEDURE New*(VAR x: Item);
-  BEGIN loadAdr(x); loadTypTagAdr(x.type.base); Put3(BLR, 7, MT); RH := 0; invalSB
+  BEGIN loadAdr(x); loadTypTagAdr(x.type.base); Trap(7, 0); RH := 0
   END New;
 
   PROCEDURE Pack*(VAR x, y: Item);
@@ -941,7 +935,9 @@ MODULE ORG; (* NW  31.5.2015  code generator in Oberon-07 for RISC*)
 
   PROCEDURE Len*(VAR x: Item);
   BEGIN
-    IF x.type.len >= 0 THEN x.mode := ORB.Const; x.a := x.type.len
+    IF x.type.len >= 0 THEN
+      IF x.mode = RegI THEN DEC(RH) END ;
+      x.mode := ORB.Const; x.a := x.type.len
     ELSE (*open array*) Put2(Ldr, RH, SP, x.a + 4 + frame); x.mode := Reg; x.r := RH; incR
     END 
   END Len;
@@ -1000,7 +996,9 @@ MODULE ORG; (* NW  31.5.2015  code generator in Oberon-07 for RISC*)
 
   PROCEDURE Open*(v: INTEGER);
   BEGIN pc := 0; tdx := 0; strx := 0; RH := 0; fixorgP := 0; fixorgD := 0; fixorgT := 0; check := v # 0; version := v;
-    IF v = 0 THEN pc := 8 END
+    IF v = 0 THEN pc := 1;
+      REPEAT code[pc] := 0; INC(pc) UNTIL pc = 8
+    END
   END Open;
 
   PROCEDURE SetDataSize*(dc: LONGINT);
@@ -1009,8 +1007,8 @@ MODULE ORG; (* NW  31.5.2015  code generator in Oberon-07 for RISC*)
 
   PROCEDURE Header*;
   BEGIN entry := pc*4;
-    IF version = 0 THEN code[0] := 0E7000000H-1 + pc; Put1a(Mov, SB, 0, VarOrg0); Put1a(Mov, SP, 0, StkOrg0)  (*RISC-0*)
-    ELSE Put1(Sub, SP, SP, 4); Put2(Str, LNK, SP, 0); invalSB
+    IF version = 0 THEN code[0] := 0E7000000H-1 + pc;  Put1a(Mov, SP, 0, StkOrg0)  (*RISC-0*)
+    ELSE Put1(Sub, SP, SP, 4); Put2(Str, LNK, SP, 0)
     END
   END Header;
 
@@ -1061,9 +1059,9 @@ MODULE ORG; (* NW  31.5.2015  code generator in Oberon-07 for RISC*)
       obj := obj.next
     END ;
     size := varsize + strx + comsize + (pc + nofimps + nofent + nofptrs + 1)*4;  (*varsize includes type descriptors*)
-
+    
     ORB.MakeFileName(name, modid, ".rsc"); (*write code file*)
-    F := Files.New(name); Files.Set(R, F, 0); Files.WriteString(R, modid); Files.WriteInt(R, key); Files.WriteByte(R, version);
+    F := Files.New(name); Files.Set(R, F, 0); Files.WriteString(R, modid); Files.WriteInt(R, key); Files.Write(R, CHR(version));
     Files.WriteInt(R, size);
     obj := ORB.topScope.next;
     WHILE (obj # NIL) & (obj.class = ORB.Mod) DO  (*imports*)
@@ -1093,11 +1091,11 @@ MODULE ORG; (* NW  31.5.2015  code generator in Oberon-07 for RISC*)
     WHILE obj # NIL DO  (*entries*)
       IF obj.exno # 0 THEN
         IF (obj.class = ORB.Const) & (obj.type.form = ORB.Proc) OR (obj.class = ORB.Var) THEN
-          Files.WriteInt(R, obj.val)
+          Files.WriteInt(R, obj.val);
         ELSIF obj.class = ORB.Typ THEN
           IF obj.type.form = ORB.Record THEN Files.WriteInt(R,  obj.type.len MOD 10000H)
           ELSIF (obj.type.form = ORB.Pointer) & ((obj.type.base.typobj = NIL) OR (obj.type.base.typobj.exno = 0)) THEN
-            Files.WriteInt(R, obj.type.base.len MOD 10000H)
+            Files.WriteInt(R,  obj.type.base.len MOD 10000H)
           END
         END
       END ;
@@ -1113,6 +1111,7 @@ MODULE ORG; (* NW  31.5.2015  code generator in Oberon-07 for RISC*)
     Files.Write(R, "O"); Files.Register(F)
   END Close;
 
-BEGIN
-  relmap[0] := 1; relmap[1] := 9; relmap[2] := 5; relmap[3] := 6; relmap[4] := 14; relmap[5] := 13
+  (*---------------decoder-----------------*)
+
+BEGIN relmap[0] := 1; relmap[1] := 9; relmap[2] := 5; relmap[3] := 6; relmap[4] := 14; relmap[5] := 13;
 END ORG.

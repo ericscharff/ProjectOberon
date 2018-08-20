@@ -1,4 +1,4 @@
-MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 18.5.2013*)
+MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 20.6.2016*)
   IMPORT SYSTEM, Kernel, FileDir, Files, Modules,
     Input, Display, Viewers, Fonts, Texts, Oberon, MenuViewers, TextFrames;
 
@@ -68,7 +68,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 18.5.2013*)
   END Date;
 
   PROCEDURE Collect*;
-  BEGIN Oberon.Collect(1)
+  BEGIN Oberon.Collect(0)
   END Collect;
 
   (* ------------- Toolbox for standard display ---------------*)
@@ -86,11 +86,11 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 18.5.2013*)
     END
   END Open;
 
-  PROCEDURE Clear*;  (*used to clear Log*)
-    VAR T: Texts.Text; buf: Texts.Buffer;
-  BEGIN
-    IF Oberon.Par.frame = Oberon.Par.vwr.dsc THEN
-      T := Oberon.Par.frame.next(TextFrames.Frame).text; Texts.Delete(T, 0, T.len, buf)
+  PROCEDURE Clear*;  (*clear Log*)
+    VAR T: Texts.Text; F: Display.Frame; buf: Texts.Buffer;
+  BEGIN F := Oberon.Par.frame;
+    IF (F # NIL) & (F.next IS TextFrames.Frame) & (F = Oberon.Par.vwr.dsc) THEN
+      NEW(buf); Texts.OpenBuf(buf); T := F.next(TextFrames.Frame).text; Texts.Delete(T, 0, T.len, buf)
     END
   END Clear;
 
@@ -161,7 +161,7 @@ MODULE System; (*JG 3.10.90 / NW 12.10.93 / NW 18.5.2013*)
     ELSE
       WHILE S.class = Texts.Name DO Free1(S); Texts.Scan(S) END
     END ;
-    Oberon.Collect(1)
+    Oberon.Collect(0)
   END Free;
 
   PROCEDURE FreeFonts*;
