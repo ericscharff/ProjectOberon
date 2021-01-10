@@ -1,4 +1,4 @@
-MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 22.7.2018  Oberon compiler; code generator for RISC*)
+MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 31.5.2019  Oberon compiler; code generator for RISC*)
   IMPORT SYSTEM, Files, ORS, ORB;
   (*Code generator for Oberon compiler for RISC processor.
      Procedural interface to Parser OSAP; result in array "code".
@@ -90,6 +90,7 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 22.7.2018  Oberon compiler; code 
   BEGIN
     IF RH # 0 THEN ORS.Mark("Reg Stack"); RH := 0 END ;
     IF pc >= maxCode - 40 THEN ORS.Mark("program too long") END ;
+    IF frame # 0 THEN ORS.Mark("frame error"); frame := 0 END
   END CheckRegs;
 
   PROCEDURE SetCC(VAR x: Item; n: LONGINT);
@@ -248,11 +249,10 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 22.7.2018  Oberon compiler; code 
   PROCEDURE MakeItem*(VAR x: Item; y: ORB.Object; curlev: LONGINT);
   BEGIN x.mode := y.class; x.type := y.type; x.a := y.val; x.rdo := y.rdo;
     IF y.class = ORB.Par THEN x.b := 0
-    ELSIF y.class = ORB.Typ THEN x.a := y.type.len; x.r := -y.lev
-    ELSIF (y.class = ORB.Const) & (y.type.form = ORB.String) THEN x.b := y.lev  (*len*)
+    ELSIF (y.class = ORB.Const) & (y.type.form = ORB.String) THEN x.b := y.lev  (*len*) ;
     ELSE x.r := y.lev
     END ;
-    IF (y.lev > 0) & (y.lev # curlev) & (y.class # ORB.Const) THEN ORS.Mark("level error, not accessible") END
+    IF (y.lev > 0) & (y.lev # curlev) & (y.class # ORB.Const) THEN ORS.Mark("not accessible ") END
   END MakeItem;
 
   (* Code generation for Selectors, Variables, Constants *)
@@ -355,20 +355,25 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 22.7.2018  Oberon compiler; code 
 
   PROCEDURE TypeTest*(VAR x: Item; T: ORB.Type; varpar, isguard: BOOLEAN);
     VAR pc0: LONGINT;
-  BEGIN (*fetch tag into RH*)
-    IF varpar THEN Put2(Ldr, RH, SP, x.a+4+frame)
-    ELSE load(x);
-      pc0 := pc; Put3(BC, EQ, 0);  (*NIL belongs to every pointer type*)
-      Put2(Ldr, RH, x.r, -8)
-    END ;
-    Put2(Ldr, RH, RH, T.nofpar*4); incR;
-    loadTypTagAdr(T);  (*tag of T*)
-    Put0(Cmp, RH-1, RH-1, RH-2); DEC(RH, 2);
-    IF ~varpar THEN fix(pc0, pc - pc0 - 1) END ;
-    IF isguard THEN
-      IF check THEN Trap(NE, 2) END
-    ELSE SetCC(x, EQ);
-      IF ~varpar THEN DEC(RH) END
+  BEGIN
+    IF T = NIL THEN
+      IF x.mode >= Reg THEN DEC(RH) END ;
+      SetCC(x, 7)
+    ELSE (*fetch tag into RH*)
+      IF varpar THEN Put2(Ldr, RH, SP, x.a+4+frame)
+      ELSE load(x);
+        pc0 := pc; Put3(BC, EQ, 0);  (*NIL belongs to every pointer type*)
+        Put2(Ldr, RH, x.r, -8)
+      END ;
+      Put2(Ldr, RH, RH, T.nofpar*4); incR;
+      loadTypTagAdr(T);  (*tag of T*)
+      Put0(Cmp, RH-1, RH-1, RH-2); DEC(RH, 2);
+      IF ~varpar THEN fix(pc0, pc - pc0 - 1) END ;
+      IF isguard THEN
+        IF check THEN Trap(NE, 2) END
+      ELSE SetCC(x, EQ);
+        IF ~varpar THEN DEC(RH) END
+      END
     END
   END TypeTest;
 
@@ -1110,8 +1115,6 @@ MODULE ORG; (* N.Wirth, 16.4.2016 / 4.4.2017 / 22.7.2018  Oberon compiler; code 
     Files.WriteInt(R, fixorgP); Files.WriteInt(R, fixorgD); Files.WriteInt(R, fixorgT); Files.WriteInt(R, entry);
     Files.Write(R, "O"); Files.Register(F)
   END Close;
-
-  (*---------------decoder-----------------*)
 
 BEGIN relmap[0] := 1; relmap[1] := 9; relmap[2] := 5; relmap[3] := 6; relmap[4] := 14; relmap[5] := 13;
 END ORG.

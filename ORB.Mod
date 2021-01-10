@@ -1,4 +1,4 @@
-MODULE ORB;   (*NW 25.6.2014  / 19.4.2017  in Oberon-07*)
+MODULE ORB;   (*NW 25.6.2014  / AP 4.3.2020 / 8.3.2019  in Oberon-07*)
   IMPORT Files, ORS;
   (*Definition of data types Object and Type, which together form the data structure
     called "symbol table". Contains procedures for creation of Objects, and for search:
@@ -129,17 +129,25 @@ MODULE ORB;   (*NW 25.6.2014  / 19.4.2017  in Oberon-07*)
     FName[i] := 0X
   END MakeFileName;
   
-  PROCEDURE ThisModule(name, orgname: ORS.Ident; non: BOOLEAN; key: LONGINT): Object;
+  PROCEDURE ThisModule(name, orgname: ORS.Ident; decl: BOOLEAN; key: LONGINT): Object;
     VAR mod: Module; obj, obj1: Object;
   BEGIN obj1 := topScope; obj := obj1.next;  (*search for module*)
-    WHILE (obj # NIL) & (obj.name # name) DO obj1 := obj; obj := obj1.next END ;
-    IF obj = NIL THEN  (*insert new module*)
-      NEW(mod); mod.class := Mod; mod.rdo := FALSE;
-      mod.name := name; mod.orgname := orgname; mod.val := key;
-      mod.lev := nofmod; INC(nofmod); mod.type := noType; mod.dsc := NIL; mod.next := NIL;
-      obj1.next := mod; obj := mod
-    ELSE (*module already present*)
-      IF non THEN ORS.Mark("invalid import order") END
+    WHILE (obj # NIL) & (obj(Module).orgname # orgname) DO obj1 := obj; obj := obj1.next END ;
+    IF obj = NIL THEN  (*new module, search for alias*)
+      obj := topScope.next;
+      WHILE (obj # NIL) & (obj.name # name) DO obj := obj.next END ;
+      IF obj = NIL THEN (*insert new module*)
+        NEW(mod); mod.class := Mod; mod.rdo := FALSE;
+        mod.name := name; mod.orgname := orgname; mod.val := key;
+        mod.lev := nofmod; INC(nofmod); mod.dsc := NIL; mod.next := NIL;
+        IF decl THEN mod.type := noType ELSE mod.type := nilType END ;
+        obj1.next := mod; obj := mod
+      ELSIF decl THEN
+        IF obj.type.form = NoTyp THEN ORS.Mark("mult def") ELSE ORS.Mark("invalid import order") END
+      ELSE ORS.Mark("conflict with alias")
+      END
+    ELSIF decl THEN (*module already present, explicit import by declaration*)
+      IF  obj.type.form = NoTyp THEN ORS.Mark("mult def") ELSE ORS.Mark("invalid import order") END
     END ;
     RETURN obj
   END ThisModule;
@@ -153,7 +161,7 @@ MODULE ORB;   (*NW 25.6.2014  / 19.4.2017  in Oberon-07*)
   PROCEDURE InType(VAR R: Files.Rider; thismod: Object; VAR T: Type);
     VAR key: LONGINT;
       ref, class, form, np, readonly: INTEGER;
-      fld, par, obj, mod: Object;
+      fld, par, obj, mod, last: Object;
       t: Type;
       name, modname: ORS.Ident;
   BEGIN Read(R, ref);
@@ -169,13 +177,15 @@ MODULE ORB;   (*NW 25.6.2014  / 19.4.2017  in Oberon-07*)
         Files.ReadNum(R, t.len); (*TD adr/exno*)
         Files.ReadNum(R, t.nofpar);  (*ext level*)
         Files.ReadNum(R, t.size);
-        Read(R, class);
+        Read(R, class); last := NIL;
         WHILE class # 0 DO  (*fields*)
           NEW(fld); fld.class := class; Files.ReadString(R, fld.name);
+          IF last = NIL THEN t.dsc := fld ELSE last.next := fld END ;
+          last := fld;
           IF fld.name[0] # 0X THEN fld.expo := TRUE; InType(R, thismod, fld.type) ELSE fld.expo := FALSE; fld.type := nilType END ;
-          Files.ReadNum(R, fld.val); fld.next := obj; obj := fld; Read(R, class)
+          Files.ReadNum(R, fld.val); Read(R, class)
         END ;
-        t.dsc := obj
+        IF last = NIL THEN t.dsc := obj ELSE last.next := obj END
       ELSIF form = Proc THEN
         InType(R, thismod, t.base);
         obj := NIL; np := 0; Read(R, class);
@@ -186,7 +196,7 @@ MODULE ORB;   (*NW 25.6.2014  / 19.4.2017  in Oberon-07*)
         t.dsc := obj; t.nofpar := np; t.size := 4
       END ;
       Files.ReadString(R, modname);
-      IF modname[0] #  0X THEN  (*re-import*)
+      IF modname[0] #  0X THEN  (*re-import ========*)
         Files.ReadInt(R, key); Files.ReadString(R, name);
         mod := ThisModule(modname, modname, FALSE, key);
         obj := mod.dsc;  (*search type*)
@@ -209,7 +219,7 @@ MODULE ORB;   (*NW 25.6.2014  / 19.4.2017  in Oberon-07*)
       F: Files.File; R: Files.Rider;
   BEGIN
     IF modid1 = "SYSTEM" THEN
-      thismod := ThisModule(modid, modid1, TRUE, key); DEC(nofmod);
+      thismod := ThisModule(modid, modid1, TRUE,  key); DEC(nofmod);
       thismod.lev := 0; thismod.dsc := system; thismod.rdo := TRUE
     ELSE MakeFileName(fname, modid1, ".smb"); F := Files.Old(fname);
       IF F # NIL THEN
@@ -224,9 +234,11 @@ MODULE ORB;   (*NW 25.6.2014  / 19.4.2017  in Oberon-07*)
           IF class = Typ THEN
             t := obj.type; t.typobj := obj; Read(R, k);  (*fixup bases of previously declared pointer types*)
             WHILE k # 0 DO typtab[k].base := t; Read(R, k) END
-          ELSIF class = Const THEN
-            IF obj.type.form = Real THEN Files.ReadInt(R, obj.val) ELSE Files.ReadNum(R, obj.val) END
-          ELSIF class = Var THEN Files.ReadNum(R, obj.val); obj.rdo := TRUE
+          ELSE
+            IF class = Const THEN
+              IF obj.type.form = Real THEN Files.ReadInt(R, obj.val) ELSE Files.ReadNum(R, obj.val) END
+            ELSIF class = Var THEN Files.ReadNum(R, obj.val); obj.rdo := TRUE
+            END
           END ;
           obj.next := thismod.dsc; thismod.dsc := obj; Read(R, class)
         END ;
@@ -242,7 +254,7 @@ MODULE ORB;   (*NW 25.6.2014  / 19.4.2017  in Oberon-07*)
   END Write;
 
   PROCEDURE OutType(VAR R: Files.Rider; t: Type);
-    VAR obj, mod, fld: Object;
+    VAR obj, mod, fld, bot: Object;
 
     PROCEDURE OutPar(VAR R: Files.Rider; par: Object; n: INTEGER);
       VAR cl: INTEGER;
@@ -274,11 +286,11 @@ MODULE ORB;   (*NW 25.6.2014  / 19.4.2017  in Oberon-07*)
       IF t.form = Pointer THEN OutType(R, t.base)
       ELSIF t.form = Array THEN OutType(R, t.base); Files.WriteNum(R, t.len); Files.WriteNum(R, t.size)
       ELSIF t.form = Record THEN
-        IF t.base # NIL THEN OutType(R, t.base) ELSE OutType(R, noType) END ;
+        IF t.base # NIL THEN OutType(R, t.base); bot := t.base.dsc ELSE OutType(R, noType); bot := NIL END ;
         IF obj # NIL THEN Files.WriteNum(R, obj.exno) ELSE Write(R, 0) END ;
         Files.WriteNum(R, t.nofpar); Files.WriteNum(R, t.size);
         fld := t.dsc;
-        WHILE fld # NIL DO  (*fields*)
+        WHILE fld # bot DO  (*fields*)
           IF fld.expo THEN
             Write(R, Fld); Files.WriteString(R, fld.name); OutType(R, fld.type); Files.WriteNum(R, fld.val)  (*offset*)
           ELSE FindHiddenPointers(R, fld.type, fld.val)
@@ -291,7 +303,7 @@ MODULE ORB;   (*NW 25.6.2014  / 19.4.2017  in Oberon-07*)
       IF (t.mno > 0) & (obj # NIL) THEN  (*re-export, output name*)
         mod := topScope.next;
         WHILE (mod # NIL) & (mod.lev # t.mno) DO mod := mod.next END ;
-        IF mod # NIL THEN Files.WriteString(R, mod.name); Files.WriteInt(R, mod.val); Files.WriteString(R, obj.name)
+        IF mod # NIL THEN Files.WriteString(R, mod(Module).orgname); Files.WriteInt(R, mod.val); Files.WriteString(R, obj.name)
         ELSE ORS.Mark("re-export not found"); Write(R, 0)
         END
       ELSE Write(R, 0)
