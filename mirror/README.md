@@ -1,2 +1,1 @@
-Mirror of https://people.inf.ethz.ch/wirth/ sources in unmodified form.
-
+Mirror of [Wirth's Oberon sources](https://people.inf.ethz.ch/wirth/) in unmodified form.
