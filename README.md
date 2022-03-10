@@ -1,6 +1,6 @@
 # Project Oberon mirror
 
-This is a mirror of the source code from the [Project Oberon 2013
+This is a mirror of the materials found at the [Project Oberon 2013
 Edition](http://people.inf.ethz.ch/wirth/ProjectOberon/index.html) Web site.
 Project Oberon is the source code for a complete operating system written in
 Oberon-07. The OS is remarkably complete and self-hosting, with a GUI, compiler,
