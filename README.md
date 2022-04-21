@@ -2,7 +2,7 @@
 
 This is a mirror of the materials found at the
 [Project Oberon 2013 Edition](http://people.inf.ethz.ch/wirth/ProjectOberon/index.html)
-Web site.  Project Oberon is the source code for a complete operating system
+Web site. Project Oberon is the source code for a complete operating system
 written in Oberon-07. The system is remarkably complete and self-hosting, with a
 GUI, compiler, and upporting tools.
 
@@ -13,4 +13,4 @@ written and simulated on relatively simple FPGAs.
 
 This repository exists in part because neither Wirth's web site nor the related
 [projectoberon.com](http://projectoberon.com) does not provide any version
-control.  This is an attempt to keep history of various parts of the system.
+control. This is an attempt to keep history of various parts of the system.
