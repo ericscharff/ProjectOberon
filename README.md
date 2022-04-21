@@ -12,5 +12,5 @@ open ISA. The Risc5 here is a very simple RISC architecutre, simple enough to be
 written and simulated on relatively simple FPGAs.
 
 This repository exists in part because neither Wirth's web site nor the related
-[projectoberon](http://projectoberon.com) does not provide any version control.
-This is an attempt to keep history of various parts of the system.
+[projectoberon.com](http://projectoberon.com) does not provide any version
+control.  This is an attempt to keep history of various parts of the system.
