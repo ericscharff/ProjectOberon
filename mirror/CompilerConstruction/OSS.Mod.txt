@@ -13,8 +13,8 @@ MODULE OSS; (* NW 19.9.93 / 17.11.94 / 1.11.2013*)
     repeat* = 35;
     comma* = 40; colon* = 41; becomes* = 42; rparen* = 44;
     rbrak* = 45; then* = 47; of* = 48; do* = 49;
-    semicolon* = 52; end* = 53;
-    else* = 55; elsif* = 56; until* = 57;
+    semicolon* = 52; end* = 53; 
+    else* = 55; elsif* = 56; until* = 57; 
     array* = 60; record* = 61; const* = 63; type* = 64;
     var* = 65; procedure* = 66; begin* = 67;  module* = 69;
     eof = 70;
@@ -92,7 +92,7 @@ MODULE OSS; (* NW 19.9.93 / 17.11.94 / 1.11.2013*)
             Texts.Read(R, ch); sym := char
           ELSIF ch = "#" THEN Texts.Read(R, ch); sym := neq
           ELSIF ch = "&" THEN Texts.Read(R, ch); sym := and
-          ELSIF ch = "(" THEN Texts.Read(R, ch);
+          ELSIF ch = "(" THEN Texts.Read(R, ch); 
             IF ch = "*" THEN sym := null; comment ELSE sym := lparen END
           ELSIF ch = ")" THEN Texts.Read(R, ch); sym := rparen
           ELSIF ch = "*" THEN Texts.Read(R, ch); sym := times
@@ -105,7 +105,7 @@ MODULE OSS; (* NW 19.9.93 / 17.11.94 / 1.11.2013*)
           END
         ELSIF ch < ":" THEN Number(sym)
         ELSIF ch = ":" THEN Texts.Read(R, ch);
-          IF ch = "=" THEN Texts.Read(R, ch); sym := becomes ELSE sym := colon END
+          IF ch = "=" THEN Texts.Read(R, ch); sym := becomes ELSE sym := colon END 
         ELSIF ch = ";" THEN Texts.Read(R, ch); sym := semicolon
         ELSIF ch = "<" THEN  Texts.Read(R, ch);
           IF ch = "=" THEN Texts.Read(R, ch); sym := leq ELSE sym := lss END
@@ -137,7 +137,7 @@ MODULE OSS; (* NW 19.9.93 / 17.11.94 / 1.11.2013*)
   PROCEDURE Init*(T: Texts.Text; pos: LONGINT);
   BEGIN error := FALSE; errpos := pos; Texts.OpenReader(R, T, pos); Texts.Read(R, ch)
   END Init;
-
+  
   PROCEDURE EnterKW(sym: INTEGER; name: ARRAY OF CHAR);
   BEGIN keyTab[nkw].sym := sym; COPY(name, keyTab[nkw].id); INC(nkw)
   END EnterKW;

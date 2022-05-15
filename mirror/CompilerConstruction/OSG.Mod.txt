@@ -1,4 +1,4 @@
-MODULE OSG; (* NW 19.12.94 / 20.10.07 / OSGX  9.5.2017*)
+MODULE OSG; (* NW 19.12.94 / 20.10.07 / OSGX  9.5.2017*) 
   IMPORT SYSTEM, Files, Texts, Oberon, OSS;
 
   CONST MemSize = 8192;
@@ -39,7 +39,7 @@ MODULE OSG; (* NW 19.12.94 / 20.10.07 / OSGX  9.5.2017*)
       base*: Type;
       size*, len*, nofpar*: LONGINT
     END ;
-
+  
   VAR boolType*, intType*: Type;
     curlev*, pc*: INTEGER;
     curSB: INTEGER;
@@ -110,12 +110,12 @@ MODULE OSG; (* NW 19.12.94 / 20.10.07 / OSGX  9.5.2017*)
 
   PROCEDURE FixLink*(L: LONGINT);
     VAR L1: LONGINT;
-  BEGIN
+  BEGIN 
     WHILE L # 0 DO
       IF L < MemSize THEN L1 := code[L] MOD 40000H; fix(L, pc-L-1); L := L1 END
     END
   END FixLink;
-
+  
   PROCEDURE GetSB;
   BEGIN
     IF curSB = 1 THEN Put2(Ldw, SB, 0, pc-fixorgD); fixorgD := pc-1; curSB := 0 END
@@ -148,7 +148,7 @@ MODULE OSG; (* NW 19.12.94 / 20.10.07 / OSGX  9.5.2017*)
       incR
     ELSIF x.mode = Par THEN Put2(Ldw, RH, SP, x.a); Put1(Add, RH, RH, x.b); x.r := RH; incR
     ELSIF (x.mode = RegI) & (x.a # 0) THEN Put1(Add, x.r, x.r, x.a)
-    ELSE OSS.Mark("address error")
+    ELSE OSS.Mark("address error") 
     END ;
     x.mode := Reg
   END loadAdr;
@@ -164,7 +164,7 @@ MODULE OSG; (* NW 19.12.94 / 20.10.07 / OSGX  9.5.2017*)
 
   PROCEDURE merged(L0, L1: LONGINT): LONGINT;
     VAR L2, L3: LONGINT;
-  BEGIN
+  BEGIN 
     IF L0 # 0 THEN
       L3 := L0;
       REPEAT L2 := L3; L3 := code[L2] MOD 40000H UNTIL L3 = 0;
@@ -216,7 +216,7 @@ MODULE OSG; (* NW 19.12.94 / 20.10.07 / OSGX  9.5.2017*)
       END
     END
   END Index;
-
+  
   (* Code generation for Boolean operators *)
 
   PROCEDURE Not*(VAR x: Item);   (* x := ~x *)
@@ -314,7 +314,7 @@ MODULE OSG; (* NW 19.12.94 / 20.10.07 / OSGX  9.5.2017*)
     END ;
     SetCC(x, relmap[op - OSS.eql])
   END Relation;
-
+  
   PROCEDURE Store*(VAR x, y: Item); (* x := y *)
   BEGIN load(y);
     IF x.mode = Var THEN
@@ -348,7 +348,7 @@ MODULE OSG; (* NW 19.12.94 / 20.10.07 / OSGX  9.5.2017*)
   END OpenArrayParam;
 
   (*---------------------------------*)
-
+  
   PROCEDURE CFJump*(VAR x: Item);  (*conditional forward jump*)
   BEGIN
     IF x.mode # Cond THEN loadCond(x) END ;
@@ -364,7 +364,7 @@ MODULE OSG; (* NW 19.12.94 / 20.10.07 / OSGX  9.5.2017*)
     IF x.mode # Cond THEN loadCond(x) END ;
     Put3(2, negated(x.r), L-pc-1)
   END CBJump;
-
+  
   PROCEDURE BJump*(L: LONGINT);  (*unconditional backward jump*)
   BEGIN Put3(2, 7, L-pc-1)
   END BJump;
@@ -527,7 +527,7 @@ MODULE OSG; (* NW 19.12.94 / 20.10.07 / OSGX  9.5.2017*)
 
   PROCEDURE HexCh(k: LONGINT): CHAR;
   BEGIN
-    IF k >= 10 THEN INC(k, 27H) END ;
+    IF k >= 10 THEN INC(k, 27H) END ; 
     RETURN CHR(k+30H)
   END HexCh;
 
