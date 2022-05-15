@@ -9,7 +9,7 @@ MODULE RISC;     (*NW 22.9.07 / 15.12.2013*)
     N, Z: BOOLEAN;  (*condition flags*)
     R: ARRAY 16 OF LONGINT;
     H: LONGINT;  (*aux register for division*)
-    
+
   PROCEDURE Execute*(VAR M: ARRAY OF LONGINT; pc: LONGINT;
       VAR S: Texts.Scanner; VAR W: Texts.Writer);
     VAR a, b, op, im: LONGINT;  (*instruction fields*)
@@ -25,7 +25,7 @@ MODULE RISC;     (*NW 22.9.07 / 15.12.2013*)
       IF ~ODD(ASH(IR, -31)) THEN  (*~p:  register instruction*)
         B := R[b];
         IF ~ODD(ASH(IR, -30)) THEN (*~q*) C := R[IR MOD 10H]
-        ELSIF ~ODD(ASH(IR, -28)) THEN (*q&~v*) C := im 
+        ELSIF ~ODD(ASH(IR, -28)) THEN (*q&~v*) C := im
         ELSE (*q&v*) C := im + 0FFFF0000H
         END ;
         CASE op OF
@@ -50,7 +50,7 @@ MODULE RISC;     (*NW 22.9.07 / 15.12.2013*)
           ELSE (*input*)
             IF adr = -1 THEN (*ReadInt*) Texts.Scan(S); R[a] := S.i;
             ELSIF adr = -2 THEN (*eot*)  Z := S.class # Texts.Int
-            END 
+            END
           END
         ELSE
           IF adr >= 0 THEN (*store*) M[adr] := R[a];
@@ -65,7 +65,7 @@ MODULE RISC;     (*NW 22.9.07 / 15.12.2013*)
         IF (a = 0) & N OR (a = 1) & Z OR (a = 5) & N OR (a = 6) & (N OR Z) OR (a = 7) OR
             (a = 8) & ~N OR (a = 9) & ~Z OR (a = 13) & ~N OR (a = 14) & ~(N OR Z) THEN
           IF ODD(ASH(IR, -28)) THEN R[15] := PC * 4 END ;
-          IF ODD(ASH(IR, -29)) THEN PC := (PC + (IR MOD 1000000H)) MOD 40000H 
+          IF ODD(ASH(IR, -29)) THEN PC := (PC + (IR MOD 1000000H)) MOD 40000H
           ELSE PC := R[IR MOD 10H] DIV 4
           END
         END
@@ -74,5 +74,3 @@ MODULE RISC;     (*NW 22.9.07 / 15.12.2013*)
     Texts.Append(Oberon.Log, W.buf)
   END Execute;
 END RISC.
-
-
