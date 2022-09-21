@@ -8,3 +8,5 @@ A reconstruction of the Project Oberon PDFs is underway at
 [tex-oberon](https://github.com/guidoism/tex-oberon). The source of that project
 is [Project Oberon](http://www.projectoberon.com) which may not be identical to
 these sources.
+
+Mirror last checked on 20-Sep-2022.
