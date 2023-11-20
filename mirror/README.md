@@ -10,4 +10,5 @@ to create a clean PDF, and includes the sources for the full sytem. The source
 of that project's source files is [Project Oberon](http://www.projectoberon.com)
 which may not be identical to the sources here.
 
-Mirror last checked on 19-Nov-2023.
+Also included in another mirror of Native Oberon version 2.3.6, as captured from
+https://github.com/schierlm/NativeOberon-2.3.6-Extracted
