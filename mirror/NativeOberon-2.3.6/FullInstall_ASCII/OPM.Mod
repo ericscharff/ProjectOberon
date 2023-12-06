@@ -497,4 +497,3 @@ BEGIN
 	outputPath := ""; outputPrefix := "";	(* extension is initialized in Compiler *)
 	first := TRUE
 END OPM.
-

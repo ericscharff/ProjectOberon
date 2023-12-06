@@ -1284,6 +1284,3 @@ BEGIN
 	FirstTime := TRUE;	(* the module initialisation is delayed to the first call *)
 
 END OPA.
-
-
-

@@ -1652,4 +1652,3 @@ OPAData.DumpInstructions				#dump the instructions (for docs)
 
 
 OPA.Data
-
