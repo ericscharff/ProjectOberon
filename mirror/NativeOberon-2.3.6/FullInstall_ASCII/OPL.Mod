@@ -3365,6 +3365,3 @@ BEGIN
 	SetccConvert [4] := SETG; SetccConvert [5] := SETGE; SetccConvert [6] := SETA; SetccConvert [7] := SETAE;
 	SetccConvert [8] := SETB; SetccConvert [9] := SETBE; SetccConvert [10] := SETB; SetccConvert [11] := SETNB;
 END OPL.
-BIERd<.d<*d
-C"dd
-CTextGadgets.NewStyleProc

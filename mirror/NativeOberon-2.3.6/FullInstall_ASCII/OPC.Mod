@@ -3133,3 +3133,4 @@ BEGIN
 	delegateType := OPT.NewStr(ProcTyp, Basic); delegateType.BaseTyp := OPT.notyp; delegateType.link := NIL;
 	delegateType.sysflag := delegate
 END OPC.
+

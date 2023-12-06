@@ -1,4 +1,4 @@
-(* ETH Oberon, Copyright 1990-2003 Computer Systems Institute, ETH Zurich, CH-8092 Zurich.
+( ETH Oberon, Copyright 1990-2003 Computer Systems Institute, ETH Zurich, CH-8092 Zurich.
 Refer to the license.txt file provided with this distribution. *)
 
 (* Oberon Portable Scanner (front end) *)
@@ -464,3 +464,4 @@ END OPS.
 		~
 
 *)
+
