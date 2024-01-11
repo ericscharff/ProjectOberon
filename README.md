@@ -1,7 +1,3 @@
-[RIP Nikalus Wirth](https://news.ycombinator.com/item?id=38858012) You were
-and continue to be a massive influence in my life. I wouldn't have a passion
-for computers or a career without you.
-
 # Project Oberon mirror
 
 This is a mirror of the materials found at the
@@ -9,6 +5,10 @@ This is a mirror of the materials found at the
 Web site. Project Oberon is a complete operating system written in Oberon-07.
 The system is remarkably complete and self-hosting, with a GUI, compiler, and
 supporting tools.
+
+
+
+
 
 The targeted hardware platform is Nikalus Wirth's own creation, known as Risc5.
 This platform is not to be confused with the RISC-V architecture, which is an
