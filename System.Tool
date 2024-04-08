@@ -18,6 +18,7 @@ System.ShowModules  System.ShowCommands ^
 PCLink1.Run
 Hilbert.Draw  Sierpinski.Draw  Blink.Run  Stars.Open
 
+
 Tools.Inspect 0
 Tools.Sector 1
 Tools.ShowFile 
