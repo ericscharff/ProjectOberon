@@ -1,6 +1,7 @@
 # Project Oberon mirror
 
-This is a mirror of the materials found at the [Project Oberon 2013 Edition](http://people.inf.ethz.ch/wirth/ProjectOberon/index.html)
+This is a mirror of the materials found at the
+[Project Oberon 2013 Edition](http://people.inf.ethz.ch/wirth/ProjectOberon/index.html)
 Web site. Project Oberon is a complete operating system written in Oberon-07.
 The system is remarkably complete and self-hosting, with a GUI, compiler, and
 supporting tools.
