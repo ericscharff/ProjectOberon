@@ -1,4 +1,4 @@
-# Project Oberon mirror (2025)
+# Project Oberon mirror
 
 This is a mirror of the materials originally found at the
 [Project Oberon 2013 Edition](http://people.inf.ethz.ch/wirth/ProjectOberon/index.html)
