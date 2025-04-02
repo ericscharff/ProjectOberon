@@ -14,4 +14,5 @@ written and simulated on a relatively simple FPGA.
 This repository exists in part because neither Wirth's web site nor the related
 [projectoberon.com](http://projectoberon.com) does not provide any version
 control, nor is it clear how long Wirth's site will remain up. This is an
-attempt to keep history for various parts of the system.
+attempt to keep history for various parts of the system, and a snapshot in
+case the original sites are removed.
