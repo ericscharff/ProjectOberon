@@ -1,5 +1,3 @@
-# Happy 2026
-
 # Project Oberon mirror
 
 This is a mirror of the materials originally found at the
