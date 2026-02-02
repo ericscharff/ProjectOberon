@@ -3,7 +3,7 @@
 This is a mirror of the materials originally found at the
 [Project Oberon 2013 Edition](http://people.inf.ethz.ch/wirth/ProjectOberon/index.html)
 Web site. Project Oberon is a complete operating system written in Oberon-07.
-The system is remarkably complete and self-hosting, with a GUI, compiler, and
+The system is remarkably complete and self-hosting, with a compiler, GUI, and
 supporting tools.
 
 The target hardware platform is Nikalus Wirth's own creation, known as Risc5.
