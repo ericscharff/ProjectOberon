@@ -14,12 +14,14 @@ written and simulated on a relatively simple FPGA.
 This repository exists in part because neither Wirth's web site nor the related
 [projectoberon.com](http://projectoberon.com) does not provide any version
 control, nor is it clear how long Wirth's site will remain up. This is an
-attempt to keep history for various parts of the system, and a snapshot in
-case the original sites are removed.
+attempt to keep history for various parts of the system, and a snapshot in case
+the original sites are removed.
 
 # Related Oberon Projects
 
-* [Project Oberon in JavaScript and Java](https://schierlm.github.io/OberonEmulator/)
-* [Oberon Pi](http://pascal.hansotten.com/niklaus-wirth/project-oberon/oberon-pi/)
-* [ultibo oberon](https://github.com/MGreim/ultiboberon)
-* [Oberon RISC Emulator](https://github.com/pdewacht/oberon-risc-emu)
+- [Project Oberon in JavaScript and Java](https://schierlm.github.io/OberonEmulator/)
+- [Oberon Pi](http://pascal.hansotten.com/niklaus-wirth/project-oberon/oberon-pi/)
+- [ultibo oberon](https://github.com/MGreim/ultiboberon)
+- [Oberon RISC Emulator](https://github.com/pdewacht/oberon-risc-emu)
+- [My Oberon-07 compiler](https://github.com/ericscharff/oberon-compiler) is not
+  able to compile these sources, but it should be possible to port things.
