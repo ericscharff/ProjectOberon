@@ -25,3 +25,4 @@ the original sites are removed.
 - [Oberon RISC Emulator](https://github.com/pdewacht/oberon-risc-emu)
 - [My Oberon-07 compiler](https://github.com/ericscharff/oberon-compiler) is not
   able to compile these sources, but it should be possible to port things.
+- [Oberon Syntax Highlighting for Vim](https://github.com/ericscharff/oberon-vim)
